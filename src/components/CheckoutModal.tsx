@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, CheckCircle, ChevronDown } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import type { OrderForm } from '../types'
+import { saveOrder, generateOrderNumber } from '../lib/storage'
 
 interface Props {
   open: boolean
@@ -37,6 +38,18 @@ export default function CheckoutModal({ open, onClose }: Props) {
     if (!validate()) return
     setLoading(true)
     await new Promise(r => setTimeout(r, 1500))
+    saveOrder({
+      id: crypto.randomUUID(),
+      orderNumber: generateOrderNumber(),
+      createdAt: new Date().toISOString(),
+      customer: { name: form.name, phone: form.phone, address: form.address, thana: form.thana, district: form.district },
+      items,
+      subtotal: total,
+      delivery,
+      total: grandTotal,
+      payment: form.payment,
+      status: 'pending',
+    })
     setLoading(false)
     setSubmitted(true)
     clearCart()

@@ -19,3 +19,24 @@ export interface OrderForm {
   district: string
   payment: 'cod' | 'bkash'
 }
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+
+export interface Order {
+  id: string
+  orderNumber: string
+  createdAt: string
+  customer: {
+    name: string
+    phone: string
+    address: string
+    thana: string
+    district: string
+  }
+  items: CartItem[]
+  subtotal: number
+  delivery: number
+  total: number
+  payment: 'cod' | 'bkash'
+  status: OrderStatus
+}
