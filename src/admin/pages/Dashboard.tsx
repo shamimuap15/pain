@@ -16,13 +16,19 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const unsub = subscribeOrders(data => {
-      setOrders(data)
+    const timer = setTimeout(() => {
       setLoading(false)
-    })
-    return unsub
+      setError('Could not connect to database. Check Firestore is enabled in Firebase console.')
+    }, 8000)
+
+    const unsub = subscribeOrders(
+      data => { clearTimeout(timer); setOrders(data); setLoading(false); setError('') },
+      err => { clearTimeout(timer); setLoading(false); setError(err.message) },
+    )
+    return () => { unsub(); clearTimeout(timer) }
   }, [])
 
   const stats = useMemo(() => {
@@ -72,6 +78,8 @@ export default function Dashboard() {
 
         {loading ? (
           <div className="py-12 text-center text-gray-400 text-sm">Loading orders...</div>
+        ) : error ? (
+          <div className="py-12 text-center text-red-500 text-sm px-6">{error}</div>
         ) : recentOrders.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <ShoppingBag size={32} className="mx-auto mb-3 opacity-40" />

@@ -13,11 +13,16 @@ export async function getOrders(): Promise<Order[]> {
   return snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Order))
 }
 
-export function subscribeOrders(callback: (orders: Order[]) => void): Unsubscribe {
+export function subscribeOrders(
+  callback: (orders: Order[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
   const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, snapshot => {
-    callback(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Order)))
-  })
+  return onSnapshot(
+    q,
+    snapshot => callback(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Order))),
+    err => onError?.(err),
+  )
 }
 
 export async function saveOrder(order: Omit<Order, 'id'>): Promise<void> {
