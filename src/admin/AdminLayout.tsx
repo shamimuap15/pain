@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import { LayoutDashboard, ShoppingBag, Users, LogOut, ExternalLink } from 'lucide-react'
 import { isAdminLoggedIn, adminLogout } from '../lib/storage'
 
@@ -12,9 +11,9 @@ const navItems = [
 export default function AdminLayout() {
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!isAdminLoggedIn()) navigate('/admin', { replace: true })
-  }, [navigate])
+  if (!isAdminLoggedIn()) {
+    return <Navigate to="/admin" replace />
+  }
 
   const handleLogout = () => {
     adminLogout()

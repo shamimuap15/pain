@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { adminLogin, isAdminLoggedIn } from '../lib/storage'
 
@@ -9,8 +9,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
 
   if (isAdminLoggedIn()) {
-    navigate('/admin/dashboard', { replace: true })
-    return null
+    return <Navigate to="/admin/dashboard" replace />
   }
 
   const handleSubmit = (e: React.FormEvent) => {
