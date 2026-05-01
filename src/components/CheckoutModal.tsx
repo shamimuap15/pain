@@ -37,9 +37,7 @@ export default function CheckoutModal({ open, onClose }: Props) {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1500))
-    saveOrder({
-      id: crypto.randomUUID(),
+    await saveOrder({
       orderNumber: generateOrderNumber(),
       createdAt: new Date().toISOString(),
       customer: { name: form.name, phone: form.phone, address: form.address, thana: form.thana, district: form.district },

@@ -1,29 +1,35 @@
+import {
+  collection, addDoc, getDocs, doc, updateDoc,
+  query, orderBy, onSnapshot, type Unsubscribe,
+} from 'firebase/firestore'
+import { db } from './firebase'
 import type { Order, OrderStatus } from '../types'
 
-const ORDERS_KEY = 'herborelief_orders'
 const ADMIN_KEY = 'herborelief_admin'
 
-export function getOrders(): Order[] {
-  try {
-    return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]')
-  } catch {
-    return []
-  }
+export async function getOrders(): Promise<Order[]> {
+  const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Order))
 }
 
-export function saveOrder(order: Order): void {
-  const orders = getOrders()
-  localStorage.setItem(ORDERS_KEY, JSON.stringify([order, ...orders]))
+export function subscribeOrders(callback: (orders: Order[]) => void): Unsubscribe {
+  const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, snapshot => {
+    callback(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Order)))
+  })
 }
 
-export function updateOrderStatus(orderId: string, status: OrderStatus): void {
-  const orders = getOrders().map(o => o.id === orderId ? { ...o, status } : o)
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+export async function saveOrder(order: Omit<Order, 'id'>): Promise<void> {
+  await addDoc(collection(db, 'orders'), order)
+}
+
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  await updateDoc(doc(db, 'orders', orderId), { status })
 }
 
 export function generateOrderNumber(): string {
-  const count = getOrders().length + 1
-  return `ORD-${String(count).padStart(4, '0')}`
+  return `ORD-${Date.now().toString(36).toUpperCase().slice(-6)}`
 }
 
 export function isAdminLoggedIn(): boolean {

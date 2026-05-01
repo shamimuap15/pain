@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Search, ShoppingBag } from 'lucide-react'
-import { getOrders } from '../../lib/storage'
+import { subscribeOrders } from '../../lib/storage'
 import type { Order } from '../../types'
 
 interface Customer {
@@ -13,10 +13,19 @@ interface Customer {
 }
 
 export default function Customers() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  useEffect(() => {
+    const unsub = subscribeOrders(data => {
+      setOrders(data)
+      setLoading(false)
+    })
+    return unsub
+  }, [])
+
   const customers = useMemo<Customer[]>(() => {
-    const orders = getOrders()
     const map = new Map<string, Customer>()
     for (const order of orders) {
       const key = order.customer.phone
@@ -29,7 +38,7 @@ export default function Customers() {
       if (order.createdAt > c.lastOrderAt) c.lastOrderAt = order.createdAt
     }
     return Array.from(map.values()).sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt))
-  }, [])
+  }, [orders])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -43,7 +52,7 @@ export default function Customers() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900">Customers</h1>
-        <p className="text-gray-500 text-sm mt-1">{customers.length} unique customers</p>
+        <p className="text-gray-500 text-sm mt-1">{loading ? 'Loading...' : `${customers.length} unique customers`}</p>
       </div>
 
       <div className="relative mb-5 max-w-sm">
@@ -58,7 +67,9 @@ export default function Customers() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-12 text-center text-gray-400 text-sm">Loading customers...</div>
+        ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <ShoppingBag size={32} className="mx-auto mb-3 opacity-40" />
             <p className="font-medium">No customers yet</p>

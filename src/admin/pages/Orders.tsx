@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Search, ChevronDown, X } from 'lucide-react'
-import { getOrders, updateOrderStatus } from '../../lib/storage'
+import { subscribeOrders, updateOrderStatus } from '../../lib/storage'
 import type { Order, OrderStatus } from '../../types'
 
 const ALL_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
@@ -15,10 +15,27 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 }
 
 export default function Orders() {
-  const [orders, setOrders] = useState<Order[]>(() => getOrders())
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('all')
   const [selected, setSelected] = useState<Order | null>(null)
+
+  useEffect(() => {
+    const unsub = subscribeOrders(data => {
+      setOrders(data)
+      setLoading(false)
+    })
+    return unsub
+  }, [])
+
+  // Keep selected order in sync when Firestore updates it
+  useEffect(() => {
+    if (selected) {
+      const updated = orders.find(o => o.id === selected.id)
+      if (updated) setSelected(updated)
+    }
+  }, [orders])
 
   const filtered = useMemo(() => {
     return orders.filter(o => {
@@ -30,17 +47,15 @@ export default function Orders() {
     })
   }, [orders, search, filterStatus])
 
-  const handleStatusChange = (orderId: string, status: OrderStatus) => {
-    updateOrderStatus(orderId, status)
-    setOrders(getOrders())
-    if (selected?.id === orderId) setSelected(prev => prev ? { ...prev, status } : null)
+  const handleStatusChange = async (orderId: string, status: OrderStatus) => {
+    await updateOrderStatus(orderId, status)
   }
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900">Orders</h1>
-        <p className="text-gray-500 text-sm mt-1">{orders.length} total orders</p>
+        <p className="text-gray-500 text-sm mt-1">{loading ? 'Loading...' : `${orders.length} total orders`}</p>
       </div>
 
       {/* Filters */}
@@ -70,7 +85,9 @@ export default function Orders() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-12 text-center text-gray-400 text-sm">Loading orders...</div>
+        ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <p className="font-medium">No orders found</p>
           </div>
@@ -104,7 +121,7 @@ export default function Orders() {
                       {order.items.map(i => `${i.variant.size} ×${i.quantity}`).join(', ')}
                     </td>
                     <td className="px-5 py-4 font-bold text-gray-900">৳{order.total}</td>
-                    <td className="px-5 py-4 text-gray-600 capitalize">{order.payment === 'cod' ? 'COD' : 'bKash'}</td>
+                    <td className="px-5 py-4 text-gray-600">{order.payment === 'cod' ? 'COD' : 'bKash'}</td>
                     <td className="px-5 py-4">
                       <div className="relative" onClick={e => e.stopPropagation()}>
                         <select
@@ -201,7 +218,8 @@ export default function Orders() {
                   <span>Total</span><span className="text-brand-700">৳{selected.total}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-500 mt-1">
-                  <span>Payment</span><span className="capitalize font-semibold">{selected.payment === 'cod' ? 'Cash on Delivery' : 'bKash'}</span>
+                  <span>Payment</span>
+                  <span className="capitalize font-semibold">{selected.payment === 'cod' ? 'Cash on Delivery' : 'bKash'}</span>
                 </div>
               </div>
             </div>
