@@ -19,6 +19,7 @@ export default function CheckoutModal({ open, onClose }: Props) {
   const [errors, setErrors] = useState<Partial<OrderForm>>({})
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const delivery = total >= 500 ? 0 : 60
   const grandTotal = total + delivery
@@ -37,20 +38,27 @@ export default function CheckoutModal({ open, onClose }: Props) {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
-    await saveOrder({
-      orderNumber: generateOrderNumber(),
-      createdAt: new Date().toISOString(),
-      customer: { name: form.name, phone: form.phone, address: form.address, thana: form.thana, district: form.district },
-      items,
-      subtotal: total,
-      delivery,
-      total: grandTotal,
-      payment: form.payment,
-      status: 'pending',
-    })
-    setLoading(false)
-    setSubmitted(true)
-    clearCart()
+    setSubmitError('')
+    try {
+      await saveOrder({
+        orderNumber: generateOrderNumber(),
+        createdAt: new Date().toISOString(),
+        customer: { name: form.name, phone: form.phone, address: form.address, thana: form.thana, district: form.district },
+        items,
+        subtotal: total,
+        delivery,
+        total: grandTotal,
+        payment: form.payment,
+        status: 'pending',
+      })
+      setSubmitted(true)
+      clearCart()
+    } catch (err) {
+      console.error('Order save failed:', err)
+      setSubmitError('Failed to place order. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleClose = () => {
@@ -220,10 +228,14 @@ export default function CheckoutModal({ open, onClose }: Props) {
               </div>
             </div>
 
+            {submitError && (
+              <p className="mt-4 text-red-500 text-sm text-center font-medium">{submitError}</p>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full bg-gold-500 hover:bg-gold-400 disabled:bg-gray-300 text-white font-black py-4 rounded-xl transition-all text-lg"
+              className="mt-4 w-full bg-gold-500 hover:bg-gold-400 disabled:bg-gray-300 text-white font-black py-4 rounded-xl transition-all text-lg"
             >
               {loading ? 'Placing Order...' : `Confirm Order — ৳${grandTotal}`}
             </button>
